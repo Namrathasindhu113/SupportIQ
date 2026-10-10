@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { body, query } from 'express-validator';
 import protect from '../middleware/protect.js';
-import authorize from '../middleware/authorize.js';
+import requireMembership from '../middleware/requireMembership.js';
+import authorizeCompanyRole from '../middleware/authorizeCompanyRole.js';
 import ownerOrAgent from '../middleware/ownerOrAgent.js';
 import validate from '../middleware/validate.js';
 import {
   createTicket,
   getTickets,
+  getTicketOverview,
   getTicketById,
   updateStatus,
   updatePriority,
@@ -18,16 +20,19 @@ import {
   createMessage,
   getActivity,
 } from '../controllers/messageController.js';
+import { aiController } from '../controllers/aiController.js';
 
 const router = Router();
 
-// All ticket routes require authentication
-router.use(protect);
+// All ticket routes require authentication + active company membership.
+// Company is verified server-side from the X-Company-Id header.
+router.use(protect, requireMembership);
 
 // ── POST /api/v1/tickets ─────────────────────────────────────────────────────
+// Only customers (and company_admins acting as customer) may open tickets.
 router.post(
   '/',
-  authorize('customer'),
+  authorizeCompanyRole('customer', 'company_admin'),
   [
     body('title')
       .trim()
@@ -45,17 +50,17 @@ router.post(
       .optional()
       .isIn(['billing', 'technical', 'general', 'other'])
       .withMessage('Category must be one of: billing, technical, general, other.'),
-    // Prevent client from injecting a customer or assignedTo field
     body('customer').not().exists().withMessage('customer field is not allowed.'),
     body('status').not().exists().withMessage('status field is not allowed.'),
     body('assignedTo').not().exists().withMessage('assignedTo field is not allowed.'),
+    body('company').not().exists().withMessage('company field is not allowed.'),
   ],
   validate,
   createTicket
 );
 
 // ── GET /api/v1/tickets ──────────────────────────────────────────────────────
-// Customers see only their own; agents see all — logic lives in controller
+// All members can list tickets (scoped by role in controller).
 router.get(
   '/',
   [
@@ -82,13 +87,20 @@ router.get(
   getTickets
 );
 
+// ── GET /api/v1/tickets/overview ─────────────────────────────────────────────
+router.get(
+  '/overview',
+  authorizeCompanyRole('agent', 'company_admin'),
+  getTicketOverview
+);
+
 // ── GET /api/v1/tickets/:id ───────────────────────────────────────────────────
 router.get('/:id', ownerOrAgent, getTicketById);
 
 // ── PATCH /api/v1/tickets/:id/status ─────────────────────────────────────────
 router.patch(
   '/:id/status',
-  authorize('agent'),
+  authorizeCompanyRole('agent', 'company_admin'),
   ownerOrAgent,
   [
     body('status')
@@ -103,7 +115,7 @@ router.patch(
 // ── PATCH /api/v1/tickets/:id/priority ───────────────────────────────────────
 router.patch(
   '/:id/priority',
-  authorize('agent'),
+  authorizeCompanyRole('agent', 'company_admin'),
   ownerOrAgent,
   [
     body('priority')
@@ -118,7 +130,7 @@ router.patch(
 // ── PATCH /api/v1/tickets/:id/category ───────────────────────────────────────
 router.patch(
   '/:id/category',
-  authorize('agent'),
+  authorizeCompanyRole('agent', 'company_admin'),
   ownerOrAgent,
   [
     body('category')
@@ -133,16 +145,14 @@ router.patch(
 // ── PATCH /api/v1/tickets/:id/assign ─────────────────────────────────────────
 router.patch(
   '/:id/assign',
-  authorize('agent'),
+  authorizeCompanyRole('agent', 'company_admin'),
   ownerOrAgent,
   [
     body('assignedTo')
       .exists({ checkNull: true })
       .withMessage('assignedTo is required (use null to unassign).')
       .custom((value) => {
-        // Allow explicit null
         if (value === null) return true;
-        // Otherwise must be a non-empty string (Mongoose will validate ObjectId format)
         if (typeof value === 'string' && value.trim().length > 0) return true;
         throw new Error('assignedTo must be a valid user ID or null.');
       }),
@@ -163,7 +173,6 @@ router.post(
       .trim()
       .notEmpty().withMessage('Message body is required.')
       .isLength({ max: 5000 }).withMessage('Message cannot exceed 5000 characters.'),
-    // Prevent client from specifying sender
     body('sender').not().exists().withMessage('sender field is not allowed.'),
   ],
   validate,
@@ -172,5 +181,23 @@ router.post(
 
 // ── GET /api/v1/tickets/:id/activity ─────────────────────────────────────────
 router.get('/:id/activity', ownerOrAgent, getActivity);
+
+// ── GET /api/v1/tickets/:id/ai/analyze ───────────────────────────────────────
+// Get existing AI analysis (agent / company_admin only)
+router.get(
+  '/:id/ai/analyze',
+  authorizeCompanyRole('agent', 'company_admin'),
+  ownerOrAgent,
+  aiController.getTicketAIAnalysis
+);
+
+// ── POST /api/v1/tickets/:id/ai/analyze ──────────────────────────────────────
+// Generate new AI analysis (agent / company_admin only)
+router.post(
+  '/:id/ai/analyze',
+  authorizeCompanyRole('agent', 'company_admin'),
+  ownerOrAgent,
+  aiController.analyzeTicketAI
+);
 
 export default router;

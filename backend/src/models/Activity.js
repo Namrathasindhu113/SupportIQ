@@ -34,6 +34,15 @@ const activitySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    /**
+     * Company (tenant) this activity belongs to — denormalised from the ticket.
+     * Optional during the migration window.
+     */
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      default: null,
+    },
   },
   {
     // Only createdAt — activity records are immutable, no updatedAt needed

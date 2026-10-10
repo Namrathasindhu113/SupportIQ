@@ -26,6 +26,7 @@ export const getMessages = async (req, res, next) => {
 // POST /api/v1/tickets/:id/messages
 // Both customers (own ticket) and agents can reply.
 // sender is always taken from req.user — never trusted from the body.
+// company is always from server-side membership context.
 // ─────────────────────────────────────────────────────────────────────────────
 export const createMessage = async (req, res, next) => {
   try {
@@ -33,11 +34,12 @@ export const createMessage = async (req, res, next) => {
 
     const message = await Message.create({
       ticket: req.ticket._id,
-      sender: req.user._id,  // server-side only — never from request body
+      sender: req.user._id,
       body: body.trim(),
+      // company derived from verified server-side membership — never from client
+      ...(req.membership ? { company: req.membership.company } : {}),
     });
 
-    // Populate sender for the response
     await message.populate('sender', 'name email role');
 
     await createActivity({
@@ -45,10 +47,10 @@ export const createMessage = async (req, res, next) => {
       actorId: req.user._id,
       type: 'replied',
       meta: {
-        // Store a short preview so the timeline is useful at a glance
         messagePreview: body.trim().slice(0, 120),
         senderRole: req.user.role,
       },
+      ...(req.membership ? { companyId: req.membership.company } : {}),
     });
 
     return res.status(201).json({

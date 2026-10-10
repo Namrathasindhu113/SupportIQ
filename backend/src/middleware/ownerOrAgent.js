@@ -2,18 +2,20 @@ import Ticket from '../models/Ticket.js';
 import AppError from '../utils/AppError.js';
 
 /**
- * ownerOrAgent — ticket ownership middleware.
+ * ownerOrAgent — ticket ownership + tenant isolation middleware.
  *
- * Must be used AFTER `protect`. Fetches the ticket from the DB and:
- *   - Allows agents through unconditionally.
- *   - Allows the ticket's own customer through.
- *   - Returns 403 for any other customer.
- *   - Returns 404 when the ticket doesn't exist.
+ * Must be used AFTER `protect`.
+ * When `requireMembership` has already run (req.membership is set), it ALSO
+ * enforces company-level isolation:
  *
- * Attaches the resolved ticket to `req.ticket` so downstream
- * controllers can reuse it without an extra DB call.
+ *   - The ticket must belong to the authenticated user's active company.
+ *   - company_admin and agent roles can access any ticket in their company.
+ *   - customer role can access only their own tickets in their company.
  *
- * Expects `req.params.id` to be the ticket ID.
+ * When req.membership is absent (legacy / pre-migration path), behaviour falls
+ * back to the original global role check so existing demo data still works.
+ *
+ * Attaches the resolved Ticket document to `req.ticket`.
  */
 const ownerOrAgent = async (req, res, next) => {
   try {
@@ -23,14 +25,40 @@ const ownerOrAgent = async (req, res, next) => {
       return next(new AppError('Ticket not found.', 404));
     }
 
-    const isAgent = req.user.role === 'agent';
-    const isOwner = ticket.customer.toString() === req.user._id.toString();
+    if (req.membership) {
+      // ── Company-scoped path ──────────────────────────────────────────────
+      const companyId = req.membership.company.toString();
+      const role      = req.membership.role;
 
-    if (!isAgent && !isOwner) {
-      return next(new AppError('You do not have permission to access this ticket.', 403));
+      // Ticket must belong to this company
+      // (tickets with company===null are legacy; treat as not belonging to any
+      //  company-scoped workspace — reject to avoid data leakage)
+      if (!ticket.company || ticket.company.toString() !== companyId) {
+        return next(new AppError('Ticket not found.', 404));
+      }
+
+      // company_admin and agent can see all tickets in the company
+      if (role === 'company_admin' || role === 'agent') {
+        req.ticket = ticket;
+        return next();
+      }
+
+      // customer can only see their own tickets
+      if (ticket.customer.toString() !== req.user._id.toString()) {
+        return next(new AppError('You do not have permission to access this ticket.', 403));
+      }
+
+    } else {
+      // ── Legacy / pre-migration path (no membership context) ─────────────
+      const isAgent = req.user.role === 'agent';
+      const isOwner = ticket.customer.toString() === req.user._id.toString();
+
+      if (!isAgent && !isOwner) {
+        return next(new AppError('You do not have permission to access this ticket.', 403));
+      }
     }
 
-    req.ticket = ticket; // reuse in controller
+    req.ticket = ticket;
     next();
   } catch (error) {
     next(error);

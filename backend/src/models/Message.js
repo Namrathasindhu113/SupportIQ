@@ -17,6 +17,16 @@ const messageSchema = new mongoose.Schema(
       required: [true, 'Message body is required'],
       maxlength: [5000, 'Message cannot exceed 5000 characters'],
     },
+    /**
+     * Company (tenant) this message belongs to — denormalised from the ticket
+     * so messages can be filtered per-company without a join.
+     * Optional during the migration window.
+     */
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      default: null,
+    },
   },
   { timestamps: true }
 );

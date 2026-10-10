@@ -1,12 +1,20 @@
 import { Router } from 'express';
 import protect from '../middleware/protect.js';
-import authorize from '../middleware/authorize.js';
+import requireMembership from '../middleware/requireMembership.js';
+import authorizeCompanyRole from '../middleware/authorizeCompanyRole.js';
 import { getAgents } from '../controllers/userController.js';
 
 const router = Router();
 
 // ── GET /api/v1/users/agents ─────────────────────────────────────────────────
-// Agent-only: returns the list of agents for use in assignment dropdowns.
-router.get('/agents', protect, authorize('agent'), getAgents);
+// Returns agents scoped to the authenticated user's active company.
+// Requires an active membership; agents and admins only.
+router.get(
+  '/agents',
+  protect,
+  requireMembership,
+  authorizeCompanyRole('agent', 'company_admin'),
+  getAgents
+);
 
 export default router;

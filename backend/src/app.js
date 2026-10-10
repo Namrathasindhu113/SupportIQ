@@ -5,6 +5,7 @@ import errorHandler from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.js';
 import ticketRoutes from './routes/tickets.js';
 import userRoutes from './routes/users.js';
+import companyRoutes from './routes/companies.js';
 
 const app = express();
 
@@ -30,9 +31,10 @@ app.get('/api/v1/health', (_req, res) => {
 });
 
 // ── Routes ────────────────────────────────────────────────────────────────────
-app.use('/api/v1/auth',    authRoutes);
-app.use('/api/v1/tickets', ticketRoutes);
-app.use('/api/v1/users',   userRoutes);
+app.use('/api/v1/auth',      authRoutes);
+app.use('/api/v1/tickets',   ticketRoutes);
+app.use('/api/v1/users',     userRoutes);
+app.use('/api/v1/companies', companyRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
