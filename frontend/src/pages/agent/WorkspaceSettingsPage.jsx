@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell.jsx';
 import Button from '../../components/common/Button.jsx';
 import Input from '../../components/common/Input.jsx';
@@ -44,6 +45,12 @@ const WorkspaceSettingsPage = () => {
     return (
       <AppShell>
         <div className="mx-auto max-w-3xl px-6 py-12">
+          <Link
+            to="/agent/portal"
+            className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+          >
+            ← Back to Companies &amp; Workspaces
+          </Link>
           <h1 className="text-2xl font-bold text-gray-900">Workspace Settings</h1>
           <p className="mt-2 text-sm text-gray-600">
             Only a company administrator can change workspace settings.
@@ -57,6 +64,12 @@ const WorkspaceSettingsPage = () => {
     <AppShell>
       <div className="mx-auto max-w-3xl px-6 py-8">
         <div className="mb-8">
+          <Link
+            to="/agent/portal"
+            className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+          >
+            ← Back to Companies &amp; Workspaces
+          </Link>
           <h1 className="text-2xl font-bold text-gray-900">Workspace Settings</h1>
           <p className="mt-1 text-sm text-gray-500">
             Update settings for {company?.name}. Changes apply only to this company.

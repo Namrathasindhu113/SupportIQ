@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell.jsx';
 import Button from '../../components/common/Button.jsx';
 import Input from '../../components/common/Input.jsx';
@@ -36,7 +36,6 @@ const roleBadgeClass = (role) => {
 const WorkspaceManagePage = () => {
   // ── All hooks MUST be called unconditionally before any early return ───────
   const { company, membership } = useWorkspace();
-  const navigate = useNavigate();
 
   const [members,       setMembers]       = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
@@ -81,9 +80,17 @@ const WorkspaceManagePage = () => {
     return (
       <AppShell>
         <div className="flex h-full items-center justify-center py-24">
-          <p className="text-sm text-gray-500">
-            Only company administrators can manage workspace members.
-          </p>
+          <div>
+            <Link
+              to="/agent/portal"
+              className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+            >
+              ← Back to Companies &amp; Workspaces
+            </Link>
+            <p className="text-sm text-gray-500">
+              Only company administrators can manage workspace members.
+            </p>
+          </div>
         </div>
       </AppShell>
     );
@@ -167,12 +174,12 @@ const WorkspaceManagePage = () => {
       <div className="px-6 py-8 max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <button
-            onClick={() => navigate('/agent/dashboard')}
-            className="mb-3 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+          <Link
+            to="/agent/portal"
+            className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
           >
-            ← Back to dashboard
-          </button>
+            ← Back to Companies &amp; Workspaces
+          </Link>
           <h1 className="text-2xl font-bold text-gray-900">Team & Members</h1>
           <p className="mt-1 text-sm text-gray-500">
             {company?.name} — Add members and manage their roles.
