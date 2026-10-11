@@ -75,9 +75,9 @@ https://support-iq-nine.vercel.app/
 4. Explore the Overview, Support Desk, and Companies & Workspaces sections.
 5. If the account has company administrator permissions, explore Team & Members and Workspace Settings as well.
 
-**Agent demo email:** [ADD VERIFIED DEMO EMAIL]
+**Agent demo email:** agent@supportiq.dev
 
-**Agent demo password:** [ADD VERIFIED DEMO PASSWORD]
+**Agent demo password:** Agent@12345
 
 > Demo access must be verified before submission. Do not use your personal account or publish production credentials. The demo account should contain only non-sensitive sample data and have the minimum permissions required for evaluation.
 
