@@ -47,7 +47,7 @@ const RootRedirect = () => {
   const { user, loading: authLoading }                         = useAuth();
   const { company, membership, loading: wsLoading, initialized } = useWorkspace();
 
-  if (authLoading || wsLoading || !initialized) {
+  if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <Spinner size="lg" />
@@ -56,6 +56,14 @@ const RootRedirect = () => {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+
+  if (wsLoading || !initialized) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
   if (company && membership?.role === 'customer') {
     return <Navigate to="/customer/dashboard" replace />;
