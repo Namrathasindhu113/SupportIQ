@@ -2,6 +2,12 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import AppError from '../utils/AppError.js';
 
+const authCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.COOKIE_SECURE === 'true',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+});
+
 /**
  * JWT payload shape.
  *
@@ -24,11 +30,8 @@ const setTokenCookie = (res, userId, role, name) => {
   const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
 
-  // httpOnly cookie, secure in production
   const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.COOKIE_SECURE === 'true',
-    sameSite: 'lax',
+    ...authCookieOptions(),
     maxAge: expiresIn.includes('d')
       ? parseInt(expiresIn) * 24 * 60 * 60 * 1000
       : parseInt(expiresIn) * 1000,
@@ -124,11 +127,7 @@ export const login = async (req, res, next) => {
  * @access  Public
  */
 export const logout = (req, res) => {
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: process.env.COOKIE_SECURE === 'true',
-    sameSite: 'lax',
-  });
+  res.clearCookie('token', authCookieOptions());
 
   return res.json({
     success: true,
