@@ -79,7 +79,6 @@ https://support-iq-nine.vercel.app/
 
 **Agent demo password:** Agent@12345
 
-> Demo access must be verified before submission. Do not use your personal account or publish production credentials. The demo account should contain only non-sensitive sample data and have the minimum permissions required for evaluation.
 
 **Customer Portal:** Open the live application and sign in using a separate verified customer demo account, if provided.
 
