@@ -194,6 +194,81 @@ describe('Agent Portal — workspace resolution', () => {
     assert(ids.includes(c2._id.toString()));
   });
 
+  it('uses each company membership role for a multi-company agent account', async () => {
+    const agent = await mkUser('agent');
+    const adminA = await mkUser('agent');
+    const { company: companyA } = await mkCompany(adminA, 'company_admin');
+    const adminB = await mkUser('agent');
+    const { company: companyB } = await mkCompany(adminB, 'company_admin');
+    const otherCustomer = await mkUser('customer');
+
+    await Membership.insertMany([
+      { user: agent._id, company: companyA._id, role: 'customer' },
+      { user: agent._id, company: companyB._id, role: 'agent' },
+      { user: otherCustomer._id, company: companyA._id, role: 'customer' },
+    ]);
+
+    const ownTicket = await Ticket.create({
+      title: 'Own company A ticket',
+      description: 'Customer-scoped access',
+      customer: agent._id,
+      company: companyA._id,
+      status: 'open',
+      priority: 'low',
+      category: 'general',
+    });
+    await Ticket.create({
+      title: 'Other company A ticket',
+      description: 'Must remain private',
+      customer: otherCustomer._id,
+      company: companyA._id,
+      status: 'open',
+      priority: 'low',
+      category: 'general',
+    });
+
+    const memberships = await request(app)
+      .get('/api/v1/companies/my')
+      .set('Cookie', cookie(agent));
+    assert.strictEqual(memberships.status, 200);
+    assert.strictEqual(
+      memberships.body.data.memberships.find((entry) => entry.company._id === companyA._id.toString()).role,
+      'customer'
+    );
+    assert.strictEqual(
+      memberships.body.data.memberships.find((entry) => entry.company._id === companyB._id.toString()).role,
+      'agent'
+    );
+
+    const companyATickets = await request(app)
+      .get('/api/v1/tickets')
+      .set('Cookie', cookie(agent))
+      .set('X-Company-Id', companyA._id.toString());
+    assert.strictEqual(companyATickets.status, 200);
+    assert.deepStrictEqual(
+      companyATickets.body.data.tickets.map((ticket) => ticket._id),
+      [ownTicket._id.toString()]
+    );
+
+    const companyAOverview = await request(app)
+      .get('/api/v1/tickets/overview')
+      .set('Cookie', cookie(agent))
+      .set('X-Company-Id', companyA._id.toString());
+    assert.strictEqual(companyAOverview.status, 403);
+
+    const companyASettings = await request(app)
+      .patch(`/api/v1/companies/${companyA._id}`)
+      .set('Cookie', cookie(agent))
+      .send({ name: 'Unauthorized Company A Rename' });
+    assert.strictEqual(companyASettings.status, 403);
+
+    const companyBOverview = await request(app)
+      .get('/api/v1/tickets/overview')
+      .set('Cookie', cookie(agent))
+      .set('X-Company-Id', companyB._id.toString());
+    assert.strictEqual(companyBOverview.status, 200);
+  });
+
   it('agent membership role is "agent" (not company_admin) after direct add', async () => {
     const admin = await mkUser('agent');
     const { company } = await mkCompany(admin, 'company_admin');
